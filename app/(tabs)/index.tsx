@@ -38,21 +38,21 @@ export default function HomeScreen() {
     const updates = parseInt(updatesUntilChar) || 0;
 
     // Convert special values
-    const halfValue = updateHalf === "First" ? 1 : 2;
+    const halfValue = updateHalf === "First" ? 0.5 : 0;
 
     let paidValue = 0;
     switch (paidStatus) {
       case "F2P":
-        paidValue = 0;
+        paidValue = 105;
         break;
       case "BP":
-        paidValue = 10;
+        paidValue = 113.3;
         break;
       case "ESP":
-        paidValue = 20;
+        paidValue = 131.25;
         break;
       case "ESP+BP":
-        paidValue = 30;
+        paidValue = 139.55;
         break;
     }
 
@@ -60,11 +60,10 @@ export default function HomeScreen() {
     const total =
       pulls +
       jade / 160 +
-      lights / 160 +
-      days +
-      updates +
-      halfValue +
-      paidValue;
+      lights / 20 +
+      (paidValue * days) / 42 +
+      paidValue * updates -
+      paidValue * halfValue;
 
     setPredictionResult(Math.floor(total));
   };
@@ -83,6 +82,21 @@ export default function HomeScreen() {
         headerImage={
           <ThemedView style={styles.headerContainer}>
             <View style={styles.headerBackground} />
+            {/* Left background image */}
+            <Image
+              source={require("@/assets/images/fu2.webp")}
+              style={[styles.sideImage, styles.leftImage]}
+              contentFit="contain"
+            />
+
+            {/* Right background image */}
+            <Image
+              source={require("@/assets/images/fu1.webp")}
+              style={[styles.sideImage, styles.rightImage]}
+              contentFit="contain"
+            />
+
+            {/* Title images (stay on top) */}
             <Image
               source={require("@/assets/images/title1.webp")}
               style={styles.headerImage}
@@ -99,7 +113,7 @@ export default function HomeScreen() {
       >
         <ThemedView style={styles.mainContainer}>
           <ThemedView style={styles.titleContainer}>
-            <ThemedText type="title">Pull Calculator</ThemedText>
+            <ThemedText type="title">Pull Predictor</ThemedText>
           </ThemedView>
 
           <ThemedView style={styles.inputContainer}>
@@ -303,23 +317,32 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
   },
   headerContainer: {
-    width: "100%",
-    height: "100%",
-    flexDirection: "column",
-    justifyContent: "center",
+    position: "relative",
     alignItems: "center",
-    paddingHorizontal: 20,
+    justifyContent: "center",
   },
   headerBackground: {
-    position: "absolute",
-    width: "100%",
-    height: "100%",
-    backgroundColor: "rgba(245, 245, 245, 0.1)",
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "#730f95ff",
   },
   headerImage: {
-    width: "80%",
-    height: "50%",
-    position: "relative",
+    width: 200,
+    height: 150,
+    zIndex: 2, // Make sure titles are on top
+  },
+  sideImage: {
+    position: "absolute",
+    top: 0,
+    bottom: 0,
+    width: 200,
+    height: "100%",
+    zIndex: 1, // Behind title images
+  },
+  leftImage: {
+    left: 0,
+  },
+  rightImage: {
+    right: 0,
   },
   resultContainer: {
     marginTop: 20,

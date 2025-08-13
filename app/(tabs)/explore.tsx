@@ -1,3 +1,4 @@
+import { Image } from "expo-image";
 import { useRef, useState } from "react";
 import {
   KeyboardAvoidingView,
@@ -5,12 +6,12 @@ import {
   Pressable,
   StyleSheet,
   TextInput,
+  View,
 } from "react-native";
 
 import ParallaxScrollView from "@/components/ParallaxScrollView";
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
-import { IconSymbol } from "@/components/ui/IconSymbol";
 
 const FIVE_STAR_CHARACTER_CHANCE = 0.006;
 const FIVE_STAR_CONE_CHANCE = 0.008;
@@ -155,15 +156,41 @@ export default function TabTwoScreen() {
       style={{ flex: 1 }}
     >
       <ParallaxScrollView
-        headerBackgroundColor={{ light: "#D0D0D0", dark: "#353636" }}
+        headerBackgroundColor={{
+          light: "#E0B0FF",
+          dark: "#ffffffff",
+        }}
         headerImage={
-          <IconSymbol
-            size={310}
-            color="#808080"
-            name="chevron.left.forwardslash.chevron.right"
-            style={styles.headerImage}
-          />
+          <ThemedView style={styles.headerContainer}>
+            <View style={styles.headerBackground} />
+            {/* Left background image */}
+            <Image
+              source={require("@/assets/images/herta4.webp")}
+              style={[styles.sideImage, styles.leftImage]}
+              contentFit="contain"
+            />
+
+            {/* Right background image */}
+            <Image
+              source={require("@/assets/images/herta2.webp")}
+              style={[styles.sideImage, styles.rightImage]}
+              contentFit="contain"
+            />
+
+            {/* Title images (stay on top) */}
+            <Image
+              source={require("@/assets/images/title1.webp")}
+              style={styles.headerImage}
+              contentFit="contain"
+            />
+            <Image
+              source={require("@/assets/images/title3.webp")}
+              style={styles.headerImage}
+              contentFit="contain"
+            />
+          </ThemedView>
         }
+        contentContainerStyle={{ flexGrow: 1 }}
       >
         <ThemedView style={styles.titleContainer}>
           <ThemedText type="title">Star Rail Pull Simulator</ThemedText>
@@ -292,11 +319,33 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#2a2542",
   },
+  headerContainer: {
+    position: "relative",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  headerBackground: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "#7a56ae",
+  },
   headerImage: {
-    width: "100%",
-    height: "100%",
+    width: 200,
+    height: 150,
+    zIndex: 2, // Make sure titles are on top
+  },
+  sideImage: {
     position: "absolute",
     top: 0,
+    bottom: 0,
+    width: 200,
+    height: "100%",
+    zIndex: 1, // Behind title images
+  },
+  leftImage: {
+    left: 0,
+  },
+  rightImage: {
+    right: 0,
   },
   titleContainer: {
     alignItems: "center",
