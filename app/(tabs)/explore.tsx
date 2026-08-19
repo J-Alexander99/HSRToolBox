@@ -1,17 +1,17 @@
-import { Image } from "expo-image";
-import { useRef, useState } from "react";
-import {
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  StyleSheet,
-  TextInput,
-  View,
-} from "react-native";
+import { useRef, useState } from 'react';
+import type { TextInput as RNTextInput } from 'react-native';
+import { KeyboardAvoidingView, Platform, StyleSheet, Text, View } from 'react-native';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 
-import ParallaxScrollView from "@/components/ParallaxScrollView";
-import { ThemedText } from "@/components/ThemedText";
-import { ThemedView } from "@/components/ThemedView";
+import { NumberField } from '@/components/hsr/NumberField';
+import { ParallaxScreen } from '@/components/hsr/ParallaxScreen';
+import { PrimaryButton } from '@/components/hsr/PrimaryButton';
+import { ProbabilityRing } from '@/components/hsr/ProbabilityRing';
+import { ResultPanel } from '@/components/hsr/ResultPanel';
+import { ScreenHeader } from '@/components/hsr/ScreenHeader';
+import { SegmentedControl } from '@/components/hsr/SegmentedControl';
+import { HSRColors, HSRFonts } from '@/constants/theme';
+import { useResponsiveLayout } from '@/hooks/useResponsiveLayout';
 
 const FIVE_STAR_CHARACTER_CHANCE = 0.006;
 const FIVE_STAR_CONE_CHANCE = 0.008;
@@ -23,21 +23,26 @@ const LIMITED_CONE_CHANCE = 0.75;
 const LIMITED_CHARACTER_CHANCE = 0.5;
 const SOFT_PITY_INCREMENT = 0.06;
 
-export default function TabTwoScreen() {
-  const [numPulls, setNumPulls] = useState("");
-  const [characterPity, setCharacterPity] = useState("");
-  const [lightconePity, setLightconePity] = useState("");
-  const [numCharWanted, setNumCharWanted] = useState("");
-  const [numLightWanted, setNumLightWanted] = useState("");
-  const [guaranteedChar, setGuaranteedChar] = useState(false);
-  const [guaranteedLight, setGuaranteedLight] = useState(false);
+const YES_NO = ['No', 'Yes'] as const;
+
+export default function PullSimulatorScreen() {
+  const [numPulls, setNumPulls] = useState('');
+  const [characterPity, setCharacterPity] = useState('');
+  const [lightconePity, setLightconePity] = useState('');
+  const [numCharWanted, setNumCharWanted] = useState('');
+  const [numLightWanted, setNumLightWanted] = useState('');
+  const [guaranteedChar, setGuaranteedChar] = useState<(typeof YES_NO)[number]>('No');
+  const [guaranteedLight, setGuaranteedLight] = useState<(typeof YES_NO)[number]>('No');
 
   const [simulationResult, setSimulationResult] = useState<number | null>(null);
+  const [simulateTrigger, setSimulateTrigger] = useState(0);
 
-  const characterPityRef = useRef<TextInput>(null);
-  const lightconePityRef = useRef<TextInput>(null);
-  const numCharWantedRef = useRef<TextInput>(null);
-  const numLightWantedRef = useRef<TextInput>(null);
+  const { screenPadding, fieldGap } = useResponsiveLayout();
+
+  const characterPityRef = useRef<RNTextInput>(null);
+  const lightconePityRef = useRef<RNTextInput>(null);
+  const numCharWantedRef = useRef<RNTextInput>(null);
+  const numLightWantedRef = useRef<RNTextInput>(null);
 
   const calculateWarpProbability = (
     warps: number,
@@ -60,17 +65,11 @@ export default function TabTwoScreen() {
       let currConeGuaranteed = coneGuaranteed;
       let currCharacterGuaranteed = characterGuaranteed;
 
-      while (
-        warpsLeft > 0 &&
-        (charSuccesses < characterCopies || coneSuccesses < coneCopies)
-      ) {
+      while (warpsLeft > 0 && (charSuccesses < characterCopies || coneSuccesses < coneCopies)) {
         let pullingCharacter = false;
 
-        // Decide banner to pull
         if (charSuccesses < characterCopies && coneSuccesses < coneCopies) {
-          // Random choice or strategy: here, prioritize whichever is further from completion
-          pullingCharacter =
-            characterCopies - charSuccesses >= coneCopies - coneSuccesses;
+          pullingCharacter = characterCopies - charSuccesses >= coneCopies - coneSuccesses;
         } else if (charSuccesses < characterCopies) {
           pullingCharacter = true;
         } else {
@@ -80,20 +79,11 @@ export default function TabTwoScreen() {
         const randomValue = Math.random();
 
         if (pullingCharacter) {
-          // Character banner pull
           let currFiveStarChance = FIVE_STAR_CHARACTER_CHANCE;
-          currFiveStarChance +=
-            SOFT_PITY_INCREMENT *
-            Math.max(currCharPity - CHARACTER_SOFT_PITY, 0);
+          currFiveStarChance += SOFT_PITY_INCREMENT * Math.max(currCharPity - CHARACTER_SOFT_PITY, 0);
 
-          if (
-            randomValue < currFiveStarChance ||
-            currCharPity + 1 === CHARACTER_PITY
-          ) {
-            if (
-              currCharacterGuaranteed ||
-              Math.random() < LIMITED_CHARACTER_CHANCE
-            ) {
+          if (randomValue < currFiveStarChance || currCharPity + 1 === CHARACTER_PITY) {
+            if (currCharacterGuaranteed || Math.random() < LIMITED_CHARACTER_CHANCE) {
               charSuccesses++;
               currCharacterGuaranteed = false;
             } else {
@@ -104,15 +94,10 @@ export default function TabTwoScreen() {
             currCharPity++;
           }
         } else {
-          // Light cone banner pull
           let currFiveStarChance = FIVE_STAR_CONE_CHANCE;
-          currFiveStarChance +=
-            SOFT_PITY_INCREMENT * Math.max(currConePity - CONE_SOFT_PITY, 0);
+          currFiveStarChance += SOFT_PITY_INCREMENT * Math.max(currConePity - CONE_SOFT_PITY, 0);
 
-          if (
-            randomValue < currFiveStarChance ||
-            currConePity + 1 === CONE_PITY
-          ) {
+          if (randomValue < currFiveStarChance || currConePity + 1 === CONE_PITY) {
             if (currConeGuaranteed || Math.random() < LIMITED_CONE_CHANCE) {
               coneSuccesses++;
               currConeGuaranteed = false;
@@ -141,280 +126,134 @@ export default function TabTwoScreen() {
       parseInt(numPulls) || 0,
       parseInt(characterPity) || 0,
       parseInt(lightconePity) || 0,
-      guaranteedLight,
-      guaranteedChar,
+      guaranteedLight === 'Yes',
+      guaranteedChar === 'Yes',
       parseInt(numCharWanted) || 0,
       parseInt(numLightWanted) || 0,
       10000
     );
     setSimulationResult(result);
+    setSimulateTrigger((t) => t + 1);
   };
 
   return (
     <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-      style={{ flex: 1 }}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      style={styles.flex}
     >
-      <ParallaxScrollView
-        headerBackgroundColor={{
-          light: "#E0B0FF",
-          dark: "#ffffffff",
-        }}
-        headerImage={
-          <ThemedView style={styles.headerContainer}>
-            <View style={styles.headerBackground} />
-            {/* Left background image */}
-            <Image
-              source={require("@/assets/images/herta4.webp")}
-              style={[styles.sideImage, styles.leftImage]}
-              contentFit="contain"
-            />
-
-            {/* Right background image */}
-            <Image
-              source={require("@/assets/images/herta2.webp")}
-              style={[styles.sideImage, styles.rightImage]}
-              contentFit="contain"
-            />
-
-            {/* Title images (stay on top) */}
-            <Image
-              source={require("@/assets/images/title1.webp")}
-              style={styles.headerImage}
-              contentFit="contain"
-            />
-            <Image
-              source={require("@/assets/images/title3.webp")}
-              style={styles.headerImage}
-              contentFit="contain"
-            />
-          </ThemedView>
+      <ParallaxScreen
+        header={
+          <ScreenHeader
+            title="Pull Simulator"
+            image={require('@/assets/images/herta1.webp')}
+            glowColor={HSRColors.jade}
+          />
         }
-        contentContainerStyle={{ flexGrow: 1 }}
       >
-        <ThemedView style={styles.titleContainer}>
-          <ThemedText type="title">Star Rail Pull Simulator</ThemedText>
-        </ThemedView>
-
-        <ThemedView style={styles.inputContainer}>
-          <ThemedView style={styles.inputGroup}>
-            <ThemedText>Number of Pulls:</ThemedText>
-            <TextInput
-              style={styles.input}
+        <View style={[styles.content, { padding: screenPadding, gap: fieldGap + 8 }]}>
+          <Animated.View entering={FadeInDown.duration(400).delay(60)}>
+            <NumberField
+              label="Number of Pulls"
               value={numPulls}
               onChangeText={setNumPulls}
-              keyboardType="numeric"
               placeholder="Enter number of pulls"
-              placeholderTextColor="#999"
-              returnKeyType="next"
               onSubmitEditing={() => characterPityRef.current?.focus()}
+              blurOnSubmit={false}
             />
-          </ThemedView>
+          </Animated.View>
 
-          <ThemedView style={styles.inputGroup}>
-            <ThemedText>Character Banner Pity:</ThemedText>
-            <TextInput
-              ref={characterPityRef}
-              style={styles.input}
+          <Animated.View entering={FadeInDown.duration(400).delay(110)} style={[styles.row, { gap: fieldGap }]}>
+            <NumberField
+              label="Character Pity"
               value={characterPity}
               onChangeText={setCharacterPity}
-              keyboardType="numeric"
-              placeholder="Enter character pity"
-              placeholderTextColor="#999"
-              returnKeyType="next"
+              placeholder="Enter pity"
+              ref={characterPityRef}
               onSubmitEditing={() => lightconePityRef.current?.focus()}
+              blurOnSubmit={false}
             />
-          </ThemedView>
-
-          <ThemedView style={styles.inputGroup}>
-            <ThemedText>LightCone Banner Pity:</ThemedText>
-            <TextInput
-              ref={lightconePityRef}
-              style={styles.input}
+            <NumberField
+              label="Lightcone Pity"
               value={lightconePity}
               onChangeText={setLightconePity}
-              keyboardType="numeric"
-              placeholder="Enter lightcone pity"
-              placeholderTextColor="#999"
-              returnKeyType="next"
+              placeholder="Enter pity"
+              ref={lightconePityRef}
               onSubmitEditing={() => numCharWantedRef.current?.focus()}
+              blurOnSubmit={false}
             />
-          </ThemedView>
+          </Animated.View>
 
-          <ThemedView style={styles.inputGroup}>
-            <ThemedText>Number of Characters Wanted:</ThemedText>
-            <TextInput
-              ref={numCharWantedRef}
-              style={styles.input}
+          <Animated.View entering={FadeInDown.duration(400).delay(160)} style={[styles.row, { gap: fieldGap }]}>
+            <NumberField
+              label="Characters Wanted"
               value={numCharWanted}
               onChangeText={setNumCharWanted}
-              keyboardType="numeric"
-              placeholder="Enter number wanted"
-              placeholderTextColor="#999"
-              returnKeyType="next"
+              placeholder="Enter number"
+              ref={numCharWantedRef}
               onSubmitEditing={() => numLightWantedRef.current?.focus()}
+              blurOnSubmit={false}
             />
-          </ThemedView>
-
-          <ThemedView style={styles.inputGroup}>
-            <ThemedText>Number of LightCones Wanted:</ThemedText>
-            <TextInput
-              ref={numLightWantedRef}
-              style={styles.input}
+            <NumberField
+              label="Lightcones Wanted"
               value={numLightWanted}
               onChangeText={setNumLightWanted}
-              keyboardType="numeric"
-              placeholder="Enter number wanted"
-              placeholderTextColor="#999"
+              placeholder="Enter number"
+              ref={numLightWantedRef}
               returnKeyType="done"
             />
-          </ThemedView>
+          </Animated.View>
 
-          <ThemedView style={styles.inputGroup}>
-            <ThemedText>Guaranteed Character:</ThemedText>
-            <ThemedView style={styles.buttonGroup}>
-              <Pressable
-                style={[styles.button, guaranteedChar && styles.selectedButton]}
-                onPress={() => setGuaranteedChar(!guaranteedChar)}
-              >
-                <ThemedText>{guaranteedChar ? "Yes" : "No"}</ThemedText>
-              </Pressable>
-            </ThemedView>
-          </ThemedView>
+          <Animated.View entering={FadeInDown.duration(400).delay(210)} style={[styles.row, { gap: fieldGap }]}>
+            <View style={styles.flexOne}>
+              <Text style={styles.groupLabel}>Guaranteed Character</Text>
+              <SegmentedControl options={YES_NO} value={guaranteedChar} onChange={setGuaranteedChar} />
+            </View>
+            <View style={styles.flexOne}>
+              <Text style={styles.groupLabel}>Guaranteed Lightcone</Text>
+              <SegmentedControl options={YES_NO} value={guaranteedLight} onChange={setGuaranteedLight} />
+            </View>
+          </Animated.View>
 
-          <ThemedView style={styles.inputGroup}>
-            <ThemedText>Guaranteed LightCone:</ThemedText>
-            <ThemedView style={styles.buttonGroup}>
-              <Pressable
-                style={[
-                  styles.button,
-                  guaranteedLight && styles.selectedButton,
-                ]}
-                onPress={() => setGuaranteedLight(!guaranteedLight)}
-              >
-                <ThemedText>{guaranteedLight ? "Yes" : "No"}</ThemedText>
-              </Pressable>
-            </ThemedView>
-          </ThemedView>
+          <Animated.View entering={FadeInDown.duration(400).delay(260)}>
+            <PrimaryButton label="Simulate" onPress={handleSimulate} />
+          </Animated.View>
 
-          <Pressable style={styles.simulateButton} onPress={handleSimulate}>
-            <ThemedText style={styles.simulateButtonText}>Simulate</ThemedText>
-          </Pressable>
-
-          {simulationResult !== null && (
-            <ThemedView style={styles.resultContainer}>
-              <ThemedText style={styles.resultText}>
-                Probability: {simulationResult.toFixed(2)}%
-              </ThemedText>
-            </ThemedView>
-          )}
-        </ThemedView>
-      </ParallaxScrollView>
+          <ResultPanel label="Success Probability" visible={simulationResult !== null}>
+            <ProbabilityRing percent={simulationResult ?? 0} trigger={simulateTrigger} />
+            <Text style={styles.caption}>Based on 10,000 simulated warps</Text>
+          </ResultPanel>
+        </View>
+      </ParallaxScreen>
     </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  mainContainer: {
+  flex: {
     flex: 1,
-    backgroundColor: "#2a2542",
   },
-  headerContainer: {
-    position: "relative",
-    alignItems: "center",
-    justifyContent: "center",
+  content: {
+    backgroundColor: HSRColors.bg0,
   },
-  headerBackground: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "#7a56ae",
+  row: {
+    flexDirection: 'row',
   },
-  headerImage: {
-    width: 200,
-    height: 150,
-    zIndex: 2, // Make sure titles are on top
+  flexOne: {
+    flex: 1,
+    minWidth: 0,
   },
-  sideImage: {
-    position: "absolute",
-    top: 0,
-    bottom: 0,
-    width: 200,
-    height: "100%",
-    zIndex: 1, // Behind title images
+  groupLabel: {
+    fontFamily: HSRFonts.bodyBold,
+    fontSize: 12,
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+    color: HSRColors.textSecondary,
+    marginBottom: 8,
   },
-  leftImage: {
-    left: 0,
-  },
-  rightImage: {
-    right: 0,
-  },
-  titleContainer: {
-    alignItems: "center",
-    marginBottom: 20,
-    paddingVertical: 15,
-    backgroundColor: "rgba(169,156,166,0.1)",
-  },
-  titleText: {
-    color: "#e0dee0",
-  },
-  inputContainer: {
-    padding: 16,
-    gap: 16,
-    backgroundColor: "rgba(177,157,204,0.05)",
-  },
-  inputGroup: {
-    gap: 8,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: "#7a56ae",
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-    backgroundColor: "rgba(224,222,224,0.1)",
-    color: "#e0dee0",
-  },
-  buttonGroup: {
-    flexDirection: "row",
-    gap: 8,
-  },
-  button: {
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "#7a56ae",
-    backgroundColor: "rgba(224,222,224,0.1)",
-  },
-  selectedButton: {
-    backgroundColor: "#7a56ae",
-    borderColor: "#b19dcc",
-  },
-  simulateButton: {
-    backgroundColor: "#7a56ae",
-    padding: 16,
-    borderRadius: 8,
-    alignItems: "center",
-    marginTop: 16,
-    borderWidth: 1,
-    borderColor: "#b19dcc",
-  },
-  simulateButtonText: {
-    color: "#e0dee0",
-    fontSize: 18,
-    fontWeight: "bold",
-  },
-  resultContainer: {
-    marginTop: 16,
-    padding: 12,
-    backgroundColor: "rgba(224,222,224,0.1)",
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "#7a56ae",
-    alignItems: "center",
-  },
-  resultText: {
-    color: "#e0dee0",
-    fontSize: 20,
-    fontWeight: "bold",
+  caption: {
+    fontFamily: HSRFonts.body,
+    fontSize: 12,
+    color: HSRColors.textTertiary,
+    marginTop: 14,
   },
 });
