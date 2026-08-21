@@ -5,22 +5,35 @@ import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-na
 import { AngledPanel } from '@/components/hsr/AngledPanel';
 import { HSRColors, HSRFonts } from '@/constants/theme';
 
-export function PrimaryButton({ label, onPress }: { label: string; onPress: () => void }) {
+export function PrimaryButton({
+  label,
+  onPress,
+  disabled = false,
+}: {
+  label: string;
+  onPress: () => void;
+  disabled?: boolean;
+}) {
   const scale = useSharedValue(1);
 
   const style = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
+    opacity: disabled ? 0.6 : 1,
   }));
 
   return (
     <Pressable
+      disabled={disabled}
       onPressIn={() => {
+        if (disabled) return;
         scale.value = withSpring(0.96, { damping: 14, stiffness: 300 });
       }}
       onPressOut={() => {
+        if (disabled) return;
         scale.value = withSpring(1, { damping: 10, stiffness: 220 });
       }}
       onPress={() => {
+        if (disabled) return;
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
         onPress();
       }}

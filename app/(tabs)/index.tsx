@@ -10,20 +10,21 @@ import { ResultPanel } from '@/components/hsr/ResultPanel';
 import { ScreenHeader } from '@/components/hsr/ScreenHeader';
 import { SegmentedControl } from '@/components/hsr/SegmentedControl';
 import { HSRColors, HSRFonts } from '@/constants/theme';
+import { usePlannerState } from '@/contexts/PlannerContext';
 import { useResponsiveLayout } from '@/hooks/useResponsiveLayout';
 import { useCountUp } from '@/hooks/useCountUp';
+import { parseNonNegativeInt } from '@/lib/validation';
 
 const UPDATE_HALVES = ['First', 'Second'] as const;
 const PAID_OPTIONS = ['F2P', 'BP', 'ESP', 'ESP+BP'] as const;
 
 export default function PullPredictorScreen() {
-  const [currentPulls, setCurrentPulls] = useState('');
-  const [stellarJade, setStellarJade] = useState('');
-  const [starlight, setStarlight] = useState('');
-  const [daysUntilEnd, setDaysUntilEnd] = useState('');
-  const [updatesUntilChar, setUpdatesUntilChar] = useState('');
-  const [updateHalf, setUpdateHalf] = useState<(typeof UPDATE_HALVES)[number]>('First');
-  const [paidStatus, setPaidStatus] = useState<(typeof PAID_OPTIONS)[number]>('F2P');
+  const [state, setState] = usePlannerState();
+  const predictor = state.predictor;
+
+  const updatePredictor = (patch: Partial<typeof predictor>) =>
+    setState((s) => ({ ...s, predictor: { ...s.predictor, ...patch } }));
+
   const [predictionResult, setPredictionResult] = useState(0);
   const [predictTrigger, setPredictTrigger] = useState(0);
 
@@ -37,16 +38,16 @@ export default function PullPredictorScreen() {
   const animatedResult = useCountUp(predictionResult, predictTrigger);
 
   const calculatePrediction = () => {
-    const pulls = parseInt(currentPulls) || 0;
-    const jade = parseInt(stellarJade) || 0;
-    const lights = parseInt(starlight) || 0;
-    const days = parseInt(daysUntilEnd) || 0;
-    const updates = parseInt(updatesUntilChar) || 0;
+    const pulls = parseNonNegativeInt(predictor.currentPulls);
+    const jade = parseNonNegativeInt(predictor.stellarJade);
+    const lights = parseNonNegativeInt(predictor.starlight);
+    const days = parseNonNegativeInt(predictor.daysUntilEnd);
+    const updates = parseNonNegativeInt(predictor.updatesUntilChar);
 
-    const halfValue = updateHalf === 'First' ? 0.5 : 0;
+    const halfValue = predictor.updateHalf === 'First' ? 0.5 : 0;
 
     let paidValue = 0;
-    switch (paidStatus) {
+    switch (predictor.paidStatus) {
       case 'F2P':
         paidValue = 105;
         break;
@@ -64,8 +65,10 @@ export default function PullPredictorScreen() {
     const total =
       pulls + jade / 160 + lights / 20 + (paidValue * days) / 42 + paidValue * updates - paidValue * halfValue;
 
-    setPredictionResult(Math.floor(total));
+    const result = Math.floor(total);
+    setPredictionResult(result);
     setPredictTrigger((t) => t + 1);
+    setState((s) => ({ ...s, lastPredictedPulls: result }));
   };
 
   return (
@@ -76,75 +79,81 @@ export default function PullPredictorScreen() {
     >
       <ParallaxScreen
         header={
-          <ScreenHeader
-            title="Pull Predictor"
-            image={require('@/assets/images/fu1.webp')}
-            glowColor={HSRColors.primary}
-          />
+          <ScreenHeader title="Pull Predictor" image={require('@/assets/images/fu1.webp')} glowColor={HSRColors.primary} />
         }
       >
         <View style={[styles.content, { padding: screenPadding, gap: fieldGap + 8 }]}>
           <Animated.View entering={FadeInDown.duration(400).delay(60)}>
             <NumberField
               label="Currently Saved Pulls"
-              value={currentPulls}
-              onChangeText={setCurrentPulls}
+              value={predictor.currentPulls}
+              onChangeText={(v) => updatePredictor({ currentPulls: v })}
               placeholder="Enter number"
               onSubmitEditing={() => stellarJadeRef.current?.focus()}
               blurOnSubmit={false}
+              min={0}
+              max={999999}
             />
           </Animated.View>
 
           <Animated.View entering={FadeInDown.duration(400).delay(110)} style={[styles.row, { gap: fieldGap }]}>
             <NumberField
               label="Stellar Jade"
-              value={stellarJade}
-              onChangeText={setStellarJade}
+              value={predictor.stellarJade}
+              onChangeText={(v) => updatePredictor({ stellarJade: v })}
               placeholder="Enter amount"
               ref={stellarJadeRef}
               onSubmitEditing={() => starlightRef.current?.focus()}
               blurOnSubmit={false}
+              min={0}
+              max={99999999}
             />
             <NumberField
               label="Starlight"
-              value={starlight}
-              onChangeText={setStarlight}
+              value={predictor.starlight}
+              onChangeText={(v) => updatePredictor({ starlight: v })}
               placeholder="Enter amount"
               ref={starlightRef}
               onSubmitEditing={() => daysUntilEndRef.current?.focus()}
               blurOnSubmit={false}
+              min={0}
+              max={99999999}
             />
           </Animated.View>
 
           <Animated.View entering={FadeInDown.duration(400).delay(160)} style={[styles.row, { gap: fieldGap }]}>
             <NumberField
               label="Days Left in Update"
-              value={daysUntilEnd}
-              onChangeText={setDaysUntilEnd}
+              value={predictor.daysUntilEnd}
+              onChangeText={(v) => updatePredictor({ daysUntilEnd: v })}
               placeholder="Enter days"
               ref={daysUntilEndRef}
               onSubmitEditing={() => updatesUntilCharRef.current?.focus()}
               blurOnSubmit={false}
+              min={0}
+              max={42}
             />
             <NumberField
               label="Updates Until Char."
-              value={updatesUntilChar}
-              onChangeText={setUpdatesUntilChar}
+              value={predictor.updatesUntilChar}
+              onChangeText={(v) => updatePredictor({ updatesUntilChar: v })}
               placeholder="Enter number"
               ref={updatesUntilCharRef}
               returnKeyType="done"
               onSubmitEditing={() => updatesUntilCharRef.current?.blur()}
+              min={0}
+              max={999}
             />
           </Animated.View>
 
           <Animated.View entering={FadeInDown.duration(400).delay(210)}>
             <Text style={styles.groupLabel}>Update Half</Text>
-            <SegmentedControl options={UPDATE_HALVES} value={updateHalf} onChange={setUpdateHalf} />
+            <SegmentedControl options={UPDATE_HALVES} value={predictor.updateHalf} onChange={(v) => updatePredictor({ updateHalf: v })} />
           </Animated.View>
 
           <Animated.View entering={FadeInDown.duration(400).delay(250)}>
             <Text style={styles.groupLabel}>Paid User</Text>
-            <SegmentedControl options={PAID_OPTIONS} value={paidStatus} onChange={setPaidStatus} />
+            <SegmentedControl options={PAID_OPTIONS} value={predictor.paidStatus} onChange={(v) => updatePredictor({ paidStatus: v })} />
           </Animated.View>
 
           <Animated.View entering={FadeInDown.duration(400).delay(300)}>

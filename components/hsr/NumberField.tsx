@@ -14,10 +14,13 @@ type Props = {
   returnKeyType?: 'next' | 'done';
   onSubmitEditing?: () => void;
   blurOnSubmit?: boolean;
+  /** When set, the value is clamped into [min, max] on blur (only if both are provided). */
+  min?: number;
+  max?: number;
 };
 
 export const NumberField = forwardRef<RNTextInput, Props>(function NumberField(
-  { label, value, onChangeText, placeholder, returnKeyType = 'next', onSubmitEditing, blurOnSubmit },
+  { label, value, onChangeText, placeholder, returnKeyType = 'next', onSubmitEditing, blurOnSubmit, min, max },
   ref
 ) {
   const [focused, setFocused] = useState(false);
@@ -25,6 +28,15 @@ export const NumberField = forwardRef<RNTextInput, Props>(function NumberField(
   const glowStyle = useAnimatedStyle(() => ({
     shadowOpacity: withTiming(focused ? 0.55 : 0, { duration: 200 }),
   }));
+
+  const handleBlur = () => {
+    setFocused(false);
+    if (min === undefined || max === undefined || value === '') return;
+    const parsed = parseInt(value, 10);
+    if (Number.isNaN(parsed)) return;
+    const clamped = Math.min(Math.max(parsed, min), max);
+    if (clamped !== parsed) onChangeText(String(clamped));
+  };
 
   return (
     <View style={styles.wrap}>
@@ -48,7 +60,7 @@ export const NumberField = forwardRef<RNTextInput, Props>(function NumberField(
             onSubmitEditing={onSubmitEditing}
             blurOnSubmit={blurOnSubmit}
             onFocus={() => setFocused(true)}
-            onBlur={() => setFocused(false)}
+            onBlur={handleBlur}
           />
         </AngledPanel>
       </Animated.View>
